@@ -2,7 +2,10 @@
 #Echelon HSC Reporting Web Platform
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_user, LoginManager, UserMixin, logout_user, login_required
+from werkzeug.security import check_password_hash, generate_password_hash
 
+#build app and set some configs
 app = Flask(__name__)
 app.config["DEBUG"] = True
 app.config["SECRET_KEY"] = '34tk56gj67'
@@ -10,7 +13,7 @@ app.config["SECRET_KEY"] = '34tk56gj67'
 #import sqlalchemy features for new mysql
 from flask_sqlalchemy import SQLAlchemy
 
-#build db connection
+#build db connection and set configs
 SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
     username="tknecht",
     password="echelon123",
@@ -20,7 +23,30 @@ app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+#initiate db and create app with login manager
 db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+#define what a user looks like
+class User(UserMixin):
+    def __init__(self, username, password_hash):
+        self.username = username
+        self.password_hash = password_hash
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return self.username
+#dummy user list
+all_users = {
+    "tknecht": User("tknecht", generate_password_hash("888222")),
+    }
+
+@login_manager.user_loader
+def load_user(user_id):
+    return all_users.get(user_id)
 
 #define mysql models for db can put this in another file later
 class Growers(db.Model):
@@ -46,15 +72,29 @@ def fieldJSON(grower_id, field_id):
     item = session.query(Fields).filter_by(id=field_id).one()
     return jsonify(Field_Record=item.serialize)'''
 
-#start webapp
+#start webapp, create login page and logout functionality
 @app.route('/', methods=['GET','POST'])
 def login():
     if request.method == 'GET':
         return render_template('login.html', error=False)
-    if request.form["username"] != "admin" or request.form["password"] != "admin":
+
+    username = request.form["username"]
+    if username not in all_users:
         return render_template('login.html', error=True)
+
+    user = all_users[username]
+    if not user.check_password(request.form["password"]):
+        return render_template('login.html', error=True)
+    login_user(user)
     return redirect(url_for('grower'))
 
+@app.route('/logout/')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+#create index page listing available growers
 @app.route('/index')
 def grower():
     items = Growers.query.all()

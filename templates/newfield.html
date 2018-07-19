@@ -20,10 +20,18 @@
                     </button>
                     <a class="navbar-brand" href="#">Add New Field</a>
                 </div>
+                    <ul class="nav navbar-nav navbar-right">
+                        {% if current_user.is_authenticated %}
+                            <li><a href="{{ url_for('logout') }}">Log out</a></li>
+                        {% else %}
+                            <li><a href="{{ url_for('login') }}">Log in</a></li>
+                        {% endif %}
+                    </ul>
             </div>
         </nav>
         </br>
         </br>
+        {% if current_user.is_authenticated %}
         <div class="container">
             <form action="{{ url_for('newField', grower_id=grower_id)}}" method='post'>
                 <p>Name:</p>
@@ -31,5 +39,6 @@
                 <input type='submit' value='Create'>
             </form>
         </div>
+        {% endif %}
     </body>
 </html>

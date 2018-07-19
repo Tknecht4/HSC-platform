@@ -20,11 +20,19 @@
                     </button>
                     <a class="navbar-brand" href="#">Edit Field Entry</a>
                 </div>
+                    <ul class="nav navbar-nav navbar-right">
+                        {% if current_user.is_authenticated %}
+                            <li><a href="{{ url_for('logout') }}">Log out</a></li>
+                        {% else %}
+                            <li><a href="{{ url_for('login') }}">Log in</a></li>
+                        {% endif %}
+                    </ul>
             </div>
         </nav>
         </br>
         </br>
         </br>
+        {% if current_user.is_authenticated %}
         <div class="container">
             <form action="{{ url_for('editField', grower_id=grower_id, field_id=field_id)}}" method='post'>
                 <p>Name:</p>
@@ -37,5 +45,6 @@
                 <a href="{{ url_for('growerRecord', grower_id=grower_id) }}">Cancel</a>
             </form>
         </div>
+        {% endif %}
     </body>
 </html>

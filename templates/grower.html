@@ -20,9 +20,17 @@
                     </button>
                     <a class="navbar-brand" href="#">Echelon Harvest Scorecard Reporting</a>
                 </div>
+                    <ul class="nav navbar-nav navbar-right">
+                        {% if current_user.is_authenticated %}
+                            <li><a href="{{ url_for('logout') }}">Log out</a></li>
+                        {% else %}
+                            <li><a href="{{ url_for('login') }}">Log in</a></li>
+                        {% endif %}
+                    </ul>
             </div>
         </nav>
         </br>
+        {% if current_user.is_authenticated %}
         <div class="container">
             <h1>{{ grower.name }}</h1>
             {% with messages = get_flashed_messages() %}
@@ -49,5 +57,6 @@
             </br>
             <a href ="{{ url_for('grower')}}">Change Growers</a>
         </div>
+        {% endif %}
     </body>
 </html>
