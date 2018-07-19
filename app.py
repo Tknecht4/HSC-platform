@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
+app.config["SECRET_KEY"] = '34tk56gj67'
 
 #import sqlalchemy features for new mysql
 from flask_sqlalchemy import SQLAlchemy
