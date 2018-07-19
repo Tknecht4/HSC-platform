@@ -1,5 +1,5 @@
 
-# A very simple Flask Hello World app for you to get started with...
+#Echelon HSC Reporting Web Platform
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 
@@ -22,7 +22,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-#define mysql models for db
+#define mysql models for db can put this in another file later
 class Growers(db.Model):
     __tablename__ = 'growers'
     name = db.Column(db.String(250), nullable = False)
@@ -35,16 +35,6 @@ class Fields(db.Model):
     crop = db.Column(db.String(250))
     grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
 
-#this is for the old sqlite db #############################
-#from sqlalchemy import create_engine
-#from sqlalchemy.orm import sessionmaker
-#from sql_database import Base, Growers, Fields
-
-#engine = create_engine('sqlite:////home/tknecht/mysite/growers.db')
-#Base.metadata.bind = engine
-#DBSession = sessionmaker(bind=engine)
-#session = DBSession()
-############################################################
 #Build API Endpoint (GET Request)
 '''@app.route('/<int:grower_id>/JSON')
 def growerJSON(grower_id):
@@ -57,7 +47,15 @@ def fieldJSON(grower_id, field_id):
     return jsonify(Field_Record=item.serialize)'''
 
 #start webapp
-@app.route('/')
+@app.route('/', methods=['GET','POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html', error=False)
+    if request.form["username"] != "admin" or request.form["password"] != "admin":
+        return render_template('login.html', error=True)
+    return redirect(urlfor('grower'))
+
+@app.route('/index')
 def grower():
     items = Growers.query.all()
     return render_template('index.html',items=items)
