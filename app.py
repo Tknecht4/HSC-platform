@@ -2,7 +2,7 @@
 #Echelon HSC Reporting Web Platform
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_user, LoginManager, UserMixin, logout_user, login_required
+from flask_login import login_user, LoginManager, UserMixin, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 #build app and set some configs
@@ -10,8 +10,9 @@ app = Flask(__name__)
 app.config["DEBUG"] = True
 app.config["SECRET_KEY"] = '34tk56gj67'
 
-#import sqlalchemy features for new mysql
+#import sqlalchemy features for new mysql, migration
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 #build db connection and set configs
 SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
@@ -25,6 +26,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 #initiate db and create app with login manager
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -97,11 +99,16 @@ def logout():
 #create index page listing available growers
 @app.route('/index')
 def grower():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+
     items = Growers.query.all()
     return render_template('index.html',items=items)
 
 @app.route('/<int:grower_id>/')
 def growerRecord(grower_id):
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
     grower = Growers.query.filter_by(id = grower_id).one()
     items = Fields.query.filter_by(grower_id = grower_id)
     return render_template('grower.html',grower=grower, items=items)
@@ -109,7 +116,11 @@ def growerRecord(grower_id):
 #create a new field
 @app.route('/<int:grower_id>/new/', methods=['GET','POST'])
 def newField(grower_id):
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
     if request.method == 'POST':
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
         newItem = Fields(name = request.form['name'], grower_id = grower_id)
         db.session.add(newItem)
         db.session.commit()
@@ -121,8 +132,12 @@ def newField(grower_id):
 #edit existing field
 @app.route('/<int:grower_id>/<int:field_id>/edit/', methods=['GET','POST'])
 def editField(grower_id, field_id):
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
     editedItem = Fields.query.filter_by(id=field_id).one()
     if request.method == 'POST':
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
         if request.form['name']:
             editedItem.name = request.form['name']
         if request.form['crop']:
@@ -137,8 +152,12 @@ def editField(grower_id, field_id):
 #delete a field
 @app.route('/<int:grower_id>/<int:field_id>/delete/', methods=['GET','POST'])
 def deleteField(grower_id, field_id):
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
     deletedItem = Fields.query.filter_by(id=field_id).one()
     if request.method == 'POST':
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
         db.session.delete(deletedItem)
         db.session.commit()
         flash(deletedItem.name + " deleted!")
