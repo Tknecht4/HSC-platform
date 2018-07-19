@@ -58,13 +58,13 @@ def fieldJSON(grower_id, field_id):
 #start webapp
 @app.route('/')
 def grower():
-    items = session.query(Growers).all()
+    items = Growers.query.all()
     return render_template('index.html',items=items)
 
 @app.route('/<int:grower_id>/')
 def growerRecord(grower_id):
-    grower = session.query(Growers).filter_by(id = grower_id).one()
-    items = session.query(Fields).filter_by(grower_id = grower_id)
+    grower = Growers.query.filter_by(id = grower_id).one()
+    items = Fields.query.filter_by(grower_id = grower_id)
     return render_template('grower.html',grower=grower, items=items)
 
 #create a new field
@@ -72,8 +72,8 @@ def growerRecord(grower_id):
 def newField(grower_id):
     if request.method == 'POST':
         newItem = Fields(name = request.form['name'], grower_id = grower_id)
-        session.add(newItem)
-        session.commit()
+        db.session.add(newItem)
+        db.session.commit()
         flash("Successfully added " + newItem.name)
         return redirect(url_for('growerRecord', grower_id=grower_id))
     else:
@@ -82,14 +82,14 @@ def newField(grower_id):
 #edit existing field
 @app.route('/<int:grower_id>/<int:field_id>/edit/', methods=['GET','POST'])
 def editField(grower_id, field_id):
-    editedItem = session.query(Fields).filter_by(id=field_id).one()
+    editedItem = Fields.query.filter_by(id=field_id).one()
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
         if request.form['crop']:
             editedItem.crop = request.form['crop']
-        session.add(editedItem)
-        session.commit()
+        db.session.add(editedItem)
+        db.session.commit()
         flash(editedItem.name + " successfully edited!")
         return redirect(url_for('growerRecord', grower_id=grower_id))
     else:
@@ -98,10 +98,10 @@ def editField(grower_id, field_id):
 #delete a field
 @app.route('/<int:grower_id>/<int:field_id>/delete/', methods=['GET','POST'])
 def deleteField(grower_id, field_id):
-    deletedItem = session.query(Fields).filter_by(id=field_id).one()
+    deletedItem = Fields.query.filter_by(id=field_id).one()
     if request.method == 'POST':
-        session.delete(deletedItem)
-        session.commit()
+        db.session.delete(deletedItem)
+        db.session.commit()
         flash(deletedItem.name + " deleted!")
         return redirect(url_for('growerRecord', grower_id=grower_id))
     else:
