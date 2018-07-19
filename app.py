@@ -6,17 +6,44 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 app = Flask(__name__)
 app.config["DEBUG"] = True
 
-#import sqlalchemy features
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sql_database import Base, Growers, Fields
+#import sqlalchemy features for new mysql
+from flask_sqlalchemy import SQLAlchemy
+
 #build db connection
-engine = create_engine('sqlite:////home/tknecht/mysite/growers.db')
-Base.metadata.bind = engine
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
+    username="tknecht",
+    password="echelon123",
+    hostname="tknecht.mysql.pythonanywhere-services.com",
+    databasename="tknecht$growers",)
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-DBSession = sessionmaker(bind=engine)
-session = DBSession()
+db = SQLAlchemy(app)
 
+#define mysql models for db
+class Growers(db.Model):
+    __tablename__ = 'growers'
+    name = db.Column(db.String(250), nullable = False)
+    id = db.Column(db.Integer, primary_key = True)
+
+class Fields(db.Model):
+    __tablename__ = 'fields'
+    name = db.Column(db.String(250), nullable = False)
+    id = db.Column(db.Integer, primary_key = True)
+    crop = db.Column(db.String(250))
+    grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
+
+#this is for the old sqlite db #############################
+#from sqlalchemy import create_engine
+#from sqlalchemy.orm import sessionmaker
+#from sql_database import Base, Growers, Fields
+
+#engine = create_engine('sqlite:////home/tknecht/mysite/growers.db')
+#Base.metadata.bind = engine
+#DBSession = sessionmaker(bind=engine)
+#session = DBSession()
+############################################################
 #Build API Endpoint (GET Request)
 '''@app.route('/<int:grower_id>/JSON')
 def growerJSON(grower_id):
