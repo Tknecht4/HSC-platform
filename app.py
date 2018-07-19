@@ -53,7 +53,7 @@ def login():
         return render_template('login.html', error=False)
     if request.form["username"] != "admin" or request.form["password"] != "admin":
         return render_template('login.html', error=True)
-    return redirect(urlfor('grower'))
+    return redirect(url_for('grower'))
 
 @app.route('/index')
 def grower():
