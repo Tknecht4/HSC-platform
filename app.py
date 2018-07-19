@@ -53,6 +53,9 @@ class Growers(db.Model):
     __tablename__ = 'growers'
     name = db.Column(db.String(250), nullable = False)
     id = db.Column(db.Integer, primary_key = True)
+    created = db.Column(db.DateTime, default=datetime.now)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    user = db.relationship('User', foreign_keys=user_id)
 
 class Fields(db.Model):
     __tablename__ = 'fields'
@@ -61,6 +64,8 @@ class Fields(db.Model):
     crop = db.Column(db.String(250))
     grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
     created = db.Column(db.DateTime, default=datetime.now)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    user = db.relationship('User', foreign_keys=user_id)
 
 #Build API Endpoint (GET Request)
 '''@app.route('/<int:grower_id>/JSON')
