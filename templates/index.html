@@ -1,0 +1,22 @@
+<html>
+    <body>
+        <h1>Basic website shell (For now!)</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <p>
+            {% for message in messages %}
+            <strong>{{ message }}</strong>
+            {% endfor %}
+        </p>
+        {% endif %}
+        {% endwith %}
+
+        <ul>
+        {% for i in items %}
+            <li><a href ="{{ url_for('growerRecord', grower_id = i.id)}}"> {{i.name}} </a></li>
+        {% endfor %}
+        </ul>
+        </br>
+        </br>
+    </body>
+</html>

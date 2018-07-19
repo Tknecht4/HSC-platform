@@ -1,0 +1,28 @@
+<html>
+    <body>
+        <h1>{{ grower.name }}</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <p>
+            {% for message in messages %}
+            <strong>{{ message }}</strong>
+            {% endfor %}
+        </p>
+        {% endif %}
+        {% endwith %}
+
+        <a href ="{{ url_for('newField', grower_id = grower.id)}}">Create New Field</a>
+        </br>
+        {% for i in items %}
+        <h2>{{i.name}} - {{i.crop}}</h2>
+
+        <a href ="{{ url_for('editField', grower_id = grower.id, field_id = i.id)}}">Edit</a>
+        </br>
+        <a href ="{{ url_for('deleteField', grower_id = grower.id, field_id = i.id)}}">Delete</a>
+        </br>
+        {% endfor %}
+        </br>
+        </br>
+        <a href ="{{ url_for('grower')}}">Change Growers</a>
+    </body>
+</html>

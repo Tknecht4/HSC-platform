@@ -1,0 +1,10 @@
+<html>
+    <body>
+        <h1>New Field</h1>
+        <form action="{{ url_for('newField', grower_id=grower_id)}}" method='post'>
+            <p>Name:</p>
+            <input type = 'text' size='50' name='name'>
+            <input type='submit' value='Create'>
+        </form>
+    </body>
+</html>
