@@ -7,6 +7,7 @@ from werkzeug.security import check_password_hash
 from datetime import datetime
 from config import Config
 from forms import LoginForm
+import flask_excel as excel
 
 # build app
 app = Flask(__name__)
@@ -22,6 +23,7 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+excel.init_excel(app)
 
 # define what a user looks like, create user table model, password checks
 class User(UserMixin, db.Model):
@@ -169,3 +171,16 @@ def deleteField(grower_id, field_id):
     else:
         return render_template('deletefield.html', grower_id=grower_id, field_id=field_id, item=deletedItem)
 
+# Upload a csv file then ingest to db
+@app.route('/upload', methods=['GET','POST'])
+@login_required
+def uploadCSV():
+    if request.method =='POST':
+        # Get the submitted csv
+        df = pd.read_csv(request.files.get('file'))
+        # Check if valid file - test headers vs list then return if error
+
+        # load to dataframe
+        #df = pd.read_csv(file.filename)
+    else:
+    return render_template('upload.html')
