@@ -1,13 +1,13 @@
 
 # Echelon HSC Reporting Web Platform
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import login_user, LoginManager, UserMixin, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from datetime import datetime
 from config import Config
 from forms import LoginForm
-import flask_excel as excel
+import pandas as pd
 
 # build app
 app = Flask(__name__)
@@ -23,7 +23,6 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-excel.init_excel(app)
 
 # define what a user looks like, create user table model, password checks
 class User(UserMixin, db.Model):
@@ -58,26 +57,18 @@ class Fields(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     crop = db.Column(db.String(100))
     crop_year = db.Column(db.Integer)
-    map_blob = db.Column(db.LargeBinary)
+    map_img = db.Column(db.String(250))
+    plot_img = db.Column(db.String(250))
     harvest_score = db.Column(db.Integer)
     variety = db.Column(db.String(50))
     is_vr = db.Column(db.Boolean())
     avg_yield = db.Column(db.Float)
     avg_n = db.Column(db.Float)
-    report_path = db.Column(db.String(250))
+    yield_data = db.Column(db.String(500))
+    app_data = db.Column(db.String(500))
     grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
     created = db.Column(db.DateTime, default=datetime.now)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    field_data = db.relationship('Data', backref='data', lazy='dynamic')
-
-class Data(db.Model):
-    __tablename__ = 'data'
-    id = db.Column(db.Integer, primary_key = True)
-    field_id = db.Column(db.Integer, db.ForeignKey('fields.id'))
-    yield_data = db.Column(db.Float)
-    app_data = db.Column(db.Float)
-    order = db.Column(db.Integer)
-
 
 # Build API Endpoint (GET Request)
 '''@app.route('/<int:grower_id>/JSON')
@@ -93,20 +84,21 @@ def fieldJSON(grower_id, field_id):
 # start webapp, create login page and logout functionality
 @app.route('/', methods=['GET','POST'])
 def login():
-    form = LoginForm()
 
-    if request.method == 'GET':
-        return render_template('login.html', error=False, form=form)
+    if current_user.is_authenticated:
+        return redirect(url_for('grower'))
+    else:
+        form = LoginForm()
+        if request.method == 'GET':
+            return render_template('login.html', error=False, form=form)
+        user = load_user(request.form["username"])
+        if user is None:
+            return render_template('login.html', error=True, form=form)
+        if not user.check_password(request.form["password"]):
+            return render_template('login.html', error=True, form=form)
+        login_user(user)
+        return redirect(url_for('grower'))
 
-    user = load_user(request.form["username"])
-    if user is None:
-        return render_template('login.html', error=True, form=form)
-
-    if not user.check_password(request.form["password"]):
-        return render_template('login.html', error=True, form=form)
-
-    login_user(user)
-    return redirect(url_for('grower'))
 
 @app.route('/logout/')
 @login_required
@@ -133,7 +125,7 @@ def growerRecord(grower_id):
 @login_required
 def newField(grower_id):
     if request.method == 'POST':
-        newItem = Fields(name = request.form['name'], grower_id = grower_id, user=current_user)
+        newItem = Fields(name = request.form['name'], grower_id = grower_id, user_id=current_user.id)
         db.session.add(newItem)
         db.session.commit()
         flash("Successfully added " + newItem.name)
@@ -179,8 +171,52 @@ def uploadCSV():
         # Get the submitted csv
         df = pd.read_csv(request.files.get('file'))
         # Check if valid file - test headers vs list then return if error
+        # Most likely faster to query if grower exists outside of loop instead of running everytime for a config file.. as long as people don't mess with config?
+        # load records to database row by row
 
-        # load to dataframe
-        #df = pd.read_csv(file.filename)
+        for key,value in df.iterrows():
+            #map row values to dictionary format
+            field_values = {'name':value['Field_Name'], 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
+                    'map_img':value['Img_Path'], 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
+                    'avg_N':value['Avg_N'], 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id}
+            grower_values = {'name':value['Grower_Name'], 'division':value['Division'], 'user_id':current_user.id}
+
+            #check if grower exists in db
+            grower = Growers.query.filter_by(name=value['Grower_Name']).first()
+            if grower is not None:
+                #check if field exists
+                itemToEdit = Fields.query.filter_by(name=value['Field_Name']).first()
+                if itemToEdit is not None:
+                    #if the field exists we want to update existing record
+                    for key, value in field_values.items():
+                        setattr(itemToEdit, key, value)
+                    db.session.add(itemToEdit)
+                    db.session.commit()
+                else:
+                    #field does not exist but grower does
+                    newField = Fields()
+                    for key, value in field_values.items():
+                        setattr(newField, key, value)
+                    newField.grower_id = grower.id
+                    db.session.add(newField)
+                    db.session.commit()
+            else:
+                #grower and field do not exist in db
+                #make grower
+                newGrower = Growers()
+                for key, value in grower_values.items():
+                    setattr(newGrower, key, value)
+                db.session.add(newGrower)
+                db.session.commit()
+                grower = Growers.query.filter_by(name=value['Grower_name']).first()
+                newField = Fields()
+                for key, value in field_values.items():
+                    setattr(newField, key, value)
+                newField.grower_id = grower.id
+                db.session.add(newField)
+                db.session.commit()
+
+        flash("File accepted and added to database!")
+        return redirect(url_for('growerRecord', grower_id=grower.id))
     else:
-    return render_template('upload.html')
+        return render_template('upload.html')

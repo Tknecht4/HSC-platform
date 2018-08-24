@@ -19,8 +19,8 @@
                     <a class="navbar-brand" href="{{ url_for('grower') }}">Echelon Harvest Scorecard Reports</a>
                 </div>
                     <ul class="nav navbar-nav navbar-right">
-                        <li><a href="{{ url_for('uploadCSV') }}">CSV Uploader</a></li>
                         {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('uploadCSV') }}">CSV Uploader</a></li>
                             <li><a href="{{ url_for('logout') }}">Log out</a></li>
                         {% else %}
                             <li><a href="{{ url_for('login') }}">Log in</a></li>
