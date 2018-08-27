@@ -6,8 +6,8 @@
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
     </head>
-    <body>
-        <nav class = "navbar navbar-inverse">
+    <body style="padding-top: 70px;">
+        <nav class = "navbar navbar-inverse navbar-fixed-top">
             <div class="container">
                 <div class="navbar-header">
                     <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -20,10 +20,13 @@
                 </div>
                     <ul class="nav navbar-nav navbar-right">
                         {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('uploadCSV') }}">CSV Uploader</a></li>
-                            <li><a href="{{ url_for('logout') }}">Log out</a></li>
+                            {% if request.endpoint == 'growerRecord' %}
+                                <li><a  href="{{ url_for('grower') }}"><span class="btn btn-sm btn-warning">Change Growers</span></a></li>
+                            {% endif %}
+                        <li><a href="{{ url_for('uploadCSV') }}"><span class="btn btn-sm btn-success">Upload Files</span></a></li>
+                            <li><a href="{{ url_for('logout') }}"><span class="btn btn-sm btn-default">Log out</span></a></li>
                         {% else %}
-                            <li><a href="{{ url_for('login') }}">Log in</a></li>
+                            <li><a href="{{ url_for('login') }}"><span class="btn btn-sm btn-default">Log in</span></a></li>
                         {% endif %}
                     </ul>
             </div>
@@ -39,6 +42,8 @@
             </div>
             {% endif %}
             {% endwith %}
-        {% block content %} {% endblock %}
+        <div class="container">
+            {% block content %} {% endblock %}
+        </div>
     </body>
 </html>

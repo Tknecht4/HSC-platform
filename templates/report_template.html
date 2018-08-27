@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head lang="en">
+        <meta charset="UTF-8">
+        <title>Harvest Scorecard</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='reportstyle.css') }}">
+    </head>
+
+    <body>
+        <div class="page-title">
+                <img class="header-img-left-title" src="{{ url_for('static', filename='Nutrien_Logo.png') }}">
+                <img class="header-img-right-title" src="{{ url_for('static', filename='Echelon_Logo.png') }}">
+            <div class="img-title"></div>
+            <div id="title-text-box">
+                <h2>Harvest Score Card</h2>
+                <p id="title-p">{{ grower.name }}</p>
+                <p id="title-p">Crop Year: 2018</p>
+            </div>
+        </div>
+        <p style="page-break-after: always" ></p>
+
+        {% for page in pages %}
+        <p style="page-break-before: always" ></p>
+            <div class="header">
+                <img class="header-img-left" src="{{ url_for('static', filename='Nutrien_N.png') }}">
+                <img class="header-img-right" src="{{ url_for('static', filename='Echelon_E.png') }}">
+                <span class="header-text"><strong>{{ page.name }}</strong></span>
+            </div>
+            <div id="content">
+                <section id="main">
+                    <img id="mapimg" src="{{ url_for('static', filename='/image/' + page.map_img) }}">
+                </section>
+                <div class="article">
+                    <span class="legend-title">Yield (bu/ac)</span>
+                    <div class="legend">
+                        <div style="float:left">Low</div>
+                        <div style="float:right">High</div>
+                    </div>
+                </div>
+                <section class="keeptogether">
+                    <span><img class="reg-img" src="{{ url_for('static', filename='/image/' + page.plot_img) }}"></span>
+                    <div class="harvest">
+                        <span class="harvest-title"><strong>Right Rate Score</strong></span>
+                        <span class="harvest-score">{{ page.harvest_score }}</span>
+                    </div>
+                </section>
+            </div>
+            <div class="footer">
+                <span id="footer-text" style="float:right">{{ page.name }}</span>
+            </div>
+        {% endfor %}
+    </body>
+</html>

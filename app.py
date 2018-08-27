@@ -8,9 +8,10 @@ from datetime import datetime
 from config import Config
 from forms import LoginForm
 import pandas as pd
+#from flask_weasyprint import HTML, render_pdf
 
 # build app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='/home/tknecht/mysite/static')
 app.config.from_object(Config)
 
 # import sqlalchemy features for new mysql, migration
@@ -69,6 +70,7 @@ class Fields(db.Model):
     grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
     created = db.Column(db.DateTime, default=datetime.now)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    is_visible = db.Column(db.Boolean(), default = True)
 
 # Build API Endpoint (GET Request)
 '''@app.route('/<int:grower_id>/JSON')
@@ -121,17 +123,17 @@ def growerRecord(grower_id):
     return render_template('grower.html',grower=grower, items=items)
 
 # create a new field
-@app.route('/<int:grower_id>/new/', methods=['GET','POST'])
-@login_required
-def newField(grower_id):
-    if request.method == 'POST':
-        newItem = Fields(name = request.form['name'], grower_id = grower_id, user_id=current_user.id)
-        db.session.add(newItem)
-        db.session.commit()
-        flash("Successfully added " + newItem.name)
-        return redirect(url_for('growerRecord', grower_id=grower_id))
-    else:
-        return render_template('newfield.html', grower_id=grower_id)
+#@app.route('/<int:grower_id>/new/', methods=['GET','POST'])
+#@login_required
+#def newField(grower_id):
+#    if request.method == 'POST':
+#        newItem = Fields(name = request.form['name'], grower_id = grower_id, user_id=current_user.id)
+#        db.session.add(newItem)
+#        db.session.commit()
+#        flash("Successfully added " + newItem.name)
+#        return redirect(url_for('growerRecord', grower_id=grower_id))
+#    else:
+#        return render_template('newfield.html', grower_id=grower_id)
 
 # edit existing field
 @app.route('/<int:grower_id>/<int:field_id>/edit/', methods=['GET','POST'])
@@ -143,6 +145,8 @@ def editField(grower_id, field_id):
             editedItem.name = request.form['name']
         if request.form['crop']:
             editedItem.crop = request.form['crop']
+        if request.form['variety']:
+            editedItem.variety = request.form['variety']
         db.session.add(editedItem)
         db.session.commit()
         flash(editedItem.name + " successfully edited!")
@@ -176,20 +180,23 @@ def uploadCSV():
 
         for key,value in df.iterrows():
             #map row values to dictionary format
-            field_values = {'name':value['Field_Name'], 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
+            grower_name = value['Grower_Name']
+            field_name = value['Field_Name']
+            field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
                     'map_img':value['Img_Path'], 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
                     'avg_N':value['Avg_N'], 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id}
-            grower_values = {'name':value['Grower_Name'], 'division':value['Division'], 'user_id':current_user.id}
+            grower_values = {'name': grower_name, 'division':value['Division'], 'user_id':current_user.id}
 
             #check if grower exists in db
-            grower = Growers.query.filter_by(name=value['Grower_Name']).first()
+            grower = Growers.query.filter_by(name=grower_name).first()
             if grower is not None:
                 #check if field exists
-                itemToEdit = Fields.query.filter_by(name=value['Field_Name']).first()
+                itemToEdit = Fields.query.filter_by(name=field_name).first()
                 if itemToEdit is not None:
                     #if the field exists we want to update existing record
                     for key, value in field_values.items():
                         setattr(itemToEdit, key, value)
+                    itemToEdit.grower_id = grower.id
                     db.session.add(itemToEdit)
                     db.session.commit()
                 else:
@@ -208,7 +215,7 @@ def uploadCSV():
                     setattr(newGrower, key, value)
                 db.session.add(newGrower)
                 db.session.commit()
-                grower = Growers.query.filter_by(name=value['Grower_name']).first()
+                grower = Growers.query.filter_by(name=grower_name).first()
                 newField = Fields()
                 for key, value in field_values.items():
                     setattr(newField, key, value)
@@ -220,3 +227,12 @@ def uploadCSV():
         return redirect(url_for('growerRecord', grower_id=grower.id))
     else:
         return render_template('upload.html')
+@app.route('/<int:grower_id>/testpdf.pdf')
+@login_required
+def gen_pdf(grower_id):
+    #fields = Fields.query.filter_by(grower_id=14).all()
+    grower = db.session.query(Growers).filter(Growers.id == grower_id).one()
+    pages = db.session.query(Fields).filter(Fields.grower_id == grower_id)
+    #df = pd.read_sql(query.statement, query.session.bind)
+    html_out = render_template('report_template.html',pages = pages, grower=grower)
+    return render_pdf(HTML(string=html_out))
