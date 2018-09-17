@@ -1,8 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
     <div class="container">
-        <h1>{{ grower.name }}<a  href="{{ url_for('gen_pdf', grower_id = grower.id) }}"><span style="float:right;" class="btn btn-primary">Generate Report</span></a></h1>
-        <table class="table">
+        <div><span style="vertical-align:middle; font-size:20px;"><strong>{{ grower.name }}</strong></span>
+            <form id="gen-pdf" class="form-inline" style="float:right;" action="{{ url_for('gen_pdf', division=grower.division, grower_id = grower.id) }}" method='post'>
+                <label style="padding:10px;"><input type="checkbox" name="toc"> Add ToC</label>
+                <input type='submit' class="btn btn-primary" value='Generate Report'>
+            </form>
+            <img id="loady" style="display: none;" src="{{ url_for('static', filename='loading.gif') }}">
+        </div>
+        <table id="grower_table" class="table">
             <tr>
                 <th>Field Name</th>
                 <th>Crop Type</th>
@@ -14,16 +20,29 @@
                 <th></th>
             </tr>
         {% for i in items %}
+            {% if i.is_visible == 1 %}
             <tr>
                 <td>{{ i.name }}</td>
                 <td>{{ i.crop }}</td>
                 <td>{{ i.variety }}</td>
                 <td>{{ i.harvest_score }}</td>
-                <td><a class="btn btn-xs btn-info" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.map_img) }}','Map Image', 'menubar=0,resizable=0,width=750,height=620');">Map Image</a></td>
-                <td><a class="btn btn-xs btn-info" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.plot_img) }}','Map Image', 'menubar=0,resizable=0,width=800,height=350');">Regression Image</a></td>
-                <td><a class="btn btn-xs btn-warning" href ="{{ url_for('editField', grower_id = grower.id, field_id = i.id)}}">Edit </a></td>
-                <td><a class="btn btn-xs btn-danger" href ="{{ url_for('deleteField', grower_id = grower.id, field_id = i.id)}}">Delete</a></td>
+                <td><a class="btn btn-xs btn-default" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.map_img) }}','Map Image', 'menubar=0,resizable=0,width=750,height=620');">Map Image</a></td>
+                <td><a class="btn btn-xs btn-default" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.plot_img) }}','Map Image', 'menubar=0,resizable=0,width=800,height=350');">Regression Image</a></td>
+                <td><a class="btn btn-xs btn-warning" href ="{{ url_for('editField', division=grower.division, grower_id = grower.id, field_id = i.id)}}">Edit </a></td>
+                <td><a class="btn btn-xs btn-danger" href ="{{ url_for('hideField', division=grower.division, grower_id = grower.id, field_id = i.id)}}">Hide Field</a></td>
             </tr>
+            {% else %}
+            <tr class="danger">
+                <td>{{ i.name }}</td>
+                <td>{{ i.crop }}</td>
+                <td>{{ i.variety }}</td>
+                <td>{{ i.harvest_score }}</td>
+                <td><a class="btn btn-xs btn-default" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.map_img) }}','Map Image', 'menubar=0,resizable=0,width=750,height=620');">Map Image</a></td>
+                <td><a class="btn btn-xs btn-default" target="_blank" href ="javascript:window.open('{{ url_for('static', filename='/image/' + i.plot_img) }}','Map Image', 'menubar=0,resizable=0,width=800,height=350');">Regression Image</a></td>
+                <td><a class="btn btn-xs btn-warning" href ="{{ url_for('editField', division=grower.division, grower_id = grower.id, field_id = i.id)}}">Edit </a></td>
+                <td><a class="btn btn-xs btn-success" href ="{{ url_for('hideField', division=grower.division, grower_id = grower.id, field_id = i.id)}}">Show Field</a></td>
+            </tr>
+            {% endif %}
         {% endfor %}
         </table>
     </div>

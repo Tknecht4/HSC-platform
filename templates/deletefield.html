@@ -4,7 +4,7 @@
     <div class="container">
         <h1>Are you sure you want to delete {{item.name}}?</h1>
 
-        <form action="{{url_for('deleteField', grower_id=item.grower_id, field_id=item.id)}}" method='post'>
+        <form action="{{url_for('deleteField', division=item.division, grower_id=item.grower_id, field_id=item.id)}}" method='post'>
             <input type="submit", value="Delete">
         </form>
 

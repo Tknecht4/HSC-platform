@@ -2,12 +2,12 @@
 
 {% block content %}
     <div class="container">
-        <h2>Growers available for scorecards:</h2>
+        <h2>Select your division:</h2>
         </br>
         </br>
         <ul>
         {% for i in items %}
-            <li><a href ="{{ url_for('growerRecord', division=i.division, grower_id = i.id)}}" style="font-size: 15px;"> {{i.name}} </a></li>
+            <li><a href ="{{ url_for('grower', division = i.division)}}" style="font-size: 15px;"> {{i.division}} </a></li>
         {% endfor %}
         </ul>
         </br>

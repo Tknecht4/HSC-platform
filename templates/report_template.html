@@ -8,18 +8,38 @@
 
     <body>
         <div class="page-title">
-                <img class="header-img-left-title" src="{{ url_for('static', filename='Nutrien_Logo.png') }}">
-                <img class="header-img-right-title" src="{{ url_for('static', filename='Echelon_Logo.png') }}">
-            <div class="img-title"></div>
-            <div id="title-text-box">
-                <h2>Harvest Score Card</h2>
-                <p id="title-p">{{ grower.name }}</p>
-                <p id="title-p">Crop Year: 2018</p>
-            </div>
+            <img class="header-img-left-title" src="{{ url_for('static', filename='Nutrien_Logo.png') }}">
+            <img class="header-img-right-title" src="{{ url_for('static', filename='Echelon_Logo.png') }}">
+            <img class="img-title" src="{{ url_for('static', filename='title.png') }}">
+                <div id="title-text-box">
+                    <h2>Harvest Score Card</h2>
+                    <p id="title-p">{{ grower.name }}</p>
+                    <p id="title-p">Crop Year: 2018</p>
+                </div>
         </div>
         <p style="page-break-after: always" ></p>
+        {% if toc == True %}
+        <p style="page-break-before: always" ></p>
+            <table id="field-table">
+                <tr>
+                    <th style="text-align: left;">Field Name</th>
+                    <th style="text-align: center;">Crop Type</th>
+                    <th style="text-align: center;">Right Rate Score</th>
+                </tr>
+                {% for page in pages %}
+                {% if page.is_visible == 1 %}
+                <tr>
+                    <td>{{ page.name }}</td>
+                    <td style="text-align: center;">{{ page.crop }}</td>
+                    <td style="text-align: center;">{{ page.harvest_score }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        {% endif %}
 
         {% for page in pages %}
+        {% if page.is_visible == 1 %}
         <p style="page-break-before: always" ></p>
             <div class="header">
                 <img class="header-img-left" src="{{ url_for('static', filename='Nutrien_N.png') }}">
@@ -28,7 +48,7 @@
             </div>
             <div id="content">
                 <section id="main">
-                    <img id="mapimg" src="{{ url_for('static', filename='/image/' + page.map_img) }}">
+                    <img id="mapimg" src="{{ url_for('static', filename='image/' + page.map_img) }}">
                 </section>
                 <div class="article">
                     <span class="legend-title">Yield (bu/ac)</span>
@@ -38,7 +58,7 @@
                     </div>
                 </div>
                 <section class="keeptogether">
-                    <span><img class="reg-img" src="{{ url_for('static', filename='/image/' + page.plot_img) }}"></span>
+                    <span><img class="reg-img" src="{{ url_for('static', filename='image/' + page.plot_img) }}"></span>
                     <div class="harvest">
                         <span class="harvest-title"><strong>Right Rate Score</strong></span>
                         <span class="harvest-score">{{ page.harvest_score }}</span>
@@ -48,6 +68,7 @@
             <div class="footer">
                 <span id="footer-text" style="float:right">{{ page.name }}</span>
             </div>
+        {% endif %}
         {% endfor %}
     </body>
 </html>

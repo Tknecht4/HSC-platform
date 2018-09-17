@@ -2,18 +2,28 @@
 
 {% block content %}
     <div class="form-group container">
-        <h3>Upload a CSV file:</h3>
+        <h3>Upload Files:</h3>
         </br>
-        <form action="" method='post' enctype=multipart/form-data>
+        <form id="form" action="{{ url_for('uploadFiles') }}" method='post' enctype=multipart/form-data>
+            {{ form.hidden_tag() }}
             <div class="form-group">
-                <input type='file' name='file'>
+                <label>Config.csv:</label>
+                {{ form.upl_csv() }}
             </div>
             <div class="form-group">
-                <div style="margin-top: 50px">
-                    <input type='submit' class="btn btn-primary" value='Upload'>
-                    <a class="btn btn-danger" href="{{url_for('grower')}}">Cancel</a>
+                <label>Images:</label>
+                {{ form.upl_imgs(multiple="multiple") }}
+            </div>
+            <div class="form-group">
+                <div id="submit" style="margin-top: 50px">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a class="btn btn-danger" href="{{url_for('division')}}">Cancel</a>
                 </div>
             </div>
+            {% for error in form.upl_imgs.errors %}
+                <span style="color: red;">{{ error }}</span>
+            {% endfor %}
         </form>
+        <img id="loady" style="display: none;" src="{{ url_for('static', filename='loading.gif') }}">
     </div>
 {% endblock %}

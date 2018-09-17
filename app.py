@@ -6,14 +6,17 @@ from flask_login import login_user, LoginManager, UserMixin, logout_user, login_
 from werkzeug.security import check_password_hash
 from datetime import datetime
 from config import Config
-from forms import LoginForm
+from forms import LoginForm, UploadForm
 import pandas as pd
-#from flask_weasyprint import HTML, render_pdf
+from flask_weasyprint import HTML, render_pdf
+from flask.ext.uploads import configure_uploads, UploadSet, IMAGES, patch_request_class
+import os
 
 # build app
 app = Flask(__name__, static_folder='/home/tknecht/mysite/static')
 app.config.from_object(Config)
-
+app.config['UPLOADED_IMAGES_DEST'] = '/home/tknecht/mysite/static/image/'
+app.config['UPLOADED_CSVFILES_DEST'] = '/home/tknecht/mysite/static/csv/'
 # import sqlalchemy features for new mysql, migration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -24,6 +27,14 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Configure the uploading with flask-uploads
+# Flask-Uploads sets, default upload size to 32mb
+images = UploadSet('images', IMAGES)
+csv = UploadSet('csvfiles', 'csv')
+configure_uploads(app, (images, csv))
+patch_request_class(app, 32 * 1024 * 1024)
+
 
 # define what a user looks like, create user table model, password checks
 class User(UserMixin, db.Model):
@@ -61,10 +72,12 @@ class Fields(db.Model):
     map_img = db.Column(db.String(250))
     plot_img = db.Column(db.String(250))
     harvest_score = db.Column(db.Integer)
-    variety = db.Column(db.String(50))
+    variety = db.Column(db.String(100))
     is_vr = db.Column(db.Boolean())
-    avg_yield = db.Column(db.Float)
-    avg_n = db.Column(db.Float)
+    avg_yield = db.Column(db.Float(10))
+    avg_n = db.Column(db.Float(10))
+    harvest_acres = db.Column(db.Float(10))
+    applied_acres = db.Column(db.Float(10))
     yield_data = db.Column(db.String(500))
     app_data = db.Column(db.String(500))
     grower_id = db.Column(db.Integer, db.ForeignKey('growers.id'))
@@ -72,23 +85,67 @@ class Fields(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     is_visible = db.Column(db.Boolean(), default = True)
 
-# Build API Endpoint (GET Request)
-'''@app.route('/<int:grower_id>/JSON')
-def growerJSON(grower_id):
-    items = session.query(Fields).filter_by(grower_id=grower_id).all()
-    return jsonify(Field_List=[i.serialize for i in items])
+# App functions
+def ingestCSV(configcsv):
+    df = pd.read_csv(configcsv, na_filter=False)
 
-@app.route('/<int:grower_id>/<int:field_id>/JSON')
-def fieldJSON(grower_id, field_id):
-    item = session.query(Fields).filter_by(id=field_id).one()
-    return jsonify(Field_Record=item.serialize)'''
+    # Check if valid file - test headers vs list then return if error
+    # Most likely faster to query if grower exists outside of loop instead of running everytime for a config file.. as long as people don't mess with config?
+    # load records to database row by row
+
+    for key,value in df.iterrows():
+        #map row values to dictionary format
+        grower_name = value['Grower_Name']
+        field_name = value['Field_Name']
+        field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
+                'map_img':value['Img_Path'], 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
+                'avg_N':float(value['Avg_N']), 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id,
+                'harvest_acres':float(value['Harvest_Acres']), 'applied_acres':float(value['Applied_Acres'])}
+        grower_values = {'name': grower_name, 'division':value['Division'], 'user_id':current_user.id}
+
+        #check if grower exists in db
+        grower = Growers.query.filter_by(name=grower_name).first()
+        if grower is not None:
+            #check if field exists
+            itemToEdit = Fields.query.filter_by(name=field_name).first()
+            if itemToEdit is not None:
+                #if the field exists we want to update existing record
+                for key, value in field_values.items():
+                    setattr(itemToEdit, key, value)
+                itemToEdit.grower_id = grower.id
+                db.session.add(itemToEdit)
+                db.session.commit()
+            else:
+                #field does not exist but grower does
+                newField = Fields()
+                for key, value in field_values.items():
+                    setattr(newField, key, value)
+                newField.grower_id = grower.id
+                db.session.add(newField)
+                db.session.commit()
+        else:
+            #grower and field do not exist in db
+            #make grower
+            newGrower = Growers()
+            for key, value in grower_values.items():
+                setattr(newGrower, key, value)
+            db.session.add(newGrower)
+            db.session.commit()
+            grower = Growers.query.filter_by(name=grower_name).first()
+            newField = Fields()
+            for key, value in field_values.items():
+                setattr(newField, key, value)
+            newField.grower_id = grower.id
+            db.session.add(newField)
+            db.session.commit()
+    return grower
 
 # start webapp, create login page and logout functionality
 @app.route('/', methods=['GET','POST'])
 def login():
 
     if current_user.is_authenticated:
-        return redirect(url_for('grower'))
+        return redirect(url_for('division'))
     else:
         form = LoginForm()
         if request.method == 'GET':
@@ -99,8 +156,7 @@ def login():
         if not user.check_password(request.form["password"]):
             return render_template('login.html', error=True, form=form)
         login_user(user)
-        return redirect(url_for('grower'))
-
+        return redirect(url_for('division'))
 
 @app.route('/logout/')
 @login_required
@@ -109,36 +165,30 @@ def logout():
     return redirect(url_for('login'))
 
 # create index page listing available growers
-@app.route('/index')
+@app.route('/<division>/index')
 @login_required
-def grower():
-    items = Growers.query.all()
-    return render_template('index.html',items=items)
+def grower(division):
+    items = Growers.query.filter_by(division = division).order_by("name").all()
+    return render_template('index.html',division=division, items=items)
 
-@app.route('/<int:grower_id>/')
+# create division list with link to index.html
+@app.route('/division')
 @login_required
-def growerRecord(grower_id):
+def division():
+    items = Growers.query.distinct(Growers.division).group_by(Growers.division).order_by("division")
+    return render_template('division.html', items=items)
+
+@app.route('/<division>/<int:grower_id>/')
+@login_required
+def growerRecord(division, grower_id):
     grower = Growers.query.filter_by(id = grower_id).one()
-    items = Fields.query.filter_by(grower_id = grower_id)
-    return render_template('grower.html',grower=grower, items=items)
-
-# create a new field
-#@app.route('/<int:grower_id>/new/', methods=['GET','POST'])
-#@login_required
-#def newField(grower_id):
-#    if request.method == 'POST':
-#        newItem = Fields(name = request.form['name'], grower_id = grower_id, user_id=current_user.id)
-#        db.session.add(newItem)
-#        db.session.commit()
-#        flash("Successfully added " + newItem.name)
-#        return redirect(url_for('growerRecord', grower_id=grower_id))
-#    else:
-#        return render_template('newfield.html', grower_id=grower_id)
+    items = Fields.query.filter_by(grower_id = grower_id).order_by("name")
+    return render_template('grower.html',division=division, grower=grower, items=items)
 
 # edit existing field
-@app.route('/<int:grower_id>/<int:field_id>/edit/', methods=['GET','POST'])
+@app.route('/<division>/<int:grower_id>/<int:field_id>/edit/', methods=['GET','POST'])
 @login_required
-def editField(grower_id, field_id):
+def editField(division, grower_id, field_id):
     editedItem = Fields.query.filter_by(id=field_id).one()
     if request.method == 'POST':
         if request.form['name']:
@@ -150,89 +200,53 @@ def editField(grower_id, field_id):
         db.session.add(editedItem)
         db.session.commit()
         flash(editedItem.name + " successfully edited!")
-        return redirect(url_for('growerRecord', grower_id=grower_id))
+        return redirect(url_for('growerRecord', division=division, grower_id=grower_id))
     else:
-        return render_template('editfield.html',grower_id=grower_id, field_id=field_id, item=editedItem)
+        return render_template('editfield.html', division=division, grower_id=grower_id, field_id=field_id, item=editedItem)
 
-# delete a field
-@app.route('/<int:grower_id>/<int:field_id>/delete/', methods=['GET','POST'])
+# hide a field
+@app.route('/<division>/<int:grower_id>/<int:field_id>/hide/')
 @login_required
-def deleteField(grower_id, field_id):
-    deletedItem = Fields.query.filter_by(id=field_id).one()
-    if request.method == 'POST':
-        db.session.delete(deletedItem)
-        db.session.commit()
-        flash(deletedItem.name + " deleted!")
-        return redirect(url_for('growerRecord', grower_id=grower_id))
+def hideField(division, grower_id, field_id):
+    itemToHide = Fields.query.filter_by(id=field_id).one()
+
+    if itemToHide.is_visible == 1:
+        itemToHide.is_visible = 0
     else:
-        return render_template('deletefield.html', grower_id=grower_id, field_id=field_id, item=deletedItem)
+        itemToHide.is_visible = 1
+    db.session.add(itemToHide)
+    db.session.commit()
+    return redirect(url_for('growerRecord', division=division, grower_id=grower_id))
 
 # Upload a csv file then ingest to db
 @app.route('/upload', methods=['GET','POST'])
 @login_required
-def uploadCSV():
-    if request.method =='POST':
-        # Get the submitted csv
-        df = pd.read_csv(request.files.get('file'))
-        # Check if valid file - test headers vs list then return if error
-        # Most likely faster to query if grower exists outside of loop instead of running everytime for a config file.. as long as people don't mess with config?
-        # load records to database row by row
+def uploadFiles():
 
-        for key,value in df.iterrows():
-            #map row values to dictionary format
-            grower_name = value['Grower_Name']
-            field_name = value['Field_Name']
-            field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
-                    'map_img':value['Img_Path'], 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
-                    'avg_N':value['Avg_N'], 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id}
-            grower_values = {'name': grower_name, 'division':value['Division'], 'user_id':current_user.id}
+    form = UploadForm()
+    if form.validate_on_submit():
+        #process config file
+        grower = ingestCSV(form.upl_csv.data)
+        #save files to static
+        for f in request.files.getlist('upl_imgs'):
+            filepath = os.path.join(app.config['UPLOADED_IMAGES_DEST'], f.filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            images.save(f)
+        flash("Files accepted and added to database.")
+        return redirect(url_for('grower', division=grower.division, grower_id=grower.id))
+    return render_template('upload.html', form=form)
 
-            #check if grower exists in db
-            grower = Growers.query.filter_by(name=grower_name).first()
-            if grower is not None:
-                #check if field exists
-                itemToEdit = Fields.query.filter_by(name=field_name).first()
-                if itemToEdit is not None:
-                    #if the field exists we want to update existing record
-                    for key, value in field_values.items():
-                        setattr(itemToEdit, key, value)
-                    itemToEdit.grower_id = grower.id
-                    db.session.add(itemToEdit)
-                    db.session.commit()
-                else:
-                    #field does not exist but grower does
-                    newField = Fields()
-                    for key, value in field_values.items():
-                        setattr(newField, key, value)
-                    newField.grower_id = grower.id
-                    db.session.add(newField)
-                    db.session.commit()
-            else:
-                #grower and field do not exist in db
-                #make grower
-                newGrower = Growers()
-                for key, value in grower_values.items():
-                    setattr(newGrower, key, value)
-                db.session.add(newGrower)
-                db.session.commit()
-                grower = Growers.query.filter_by(name=grower_name).first()
-                newField = Fields()
-                for key, value in field_values.items():
-                    setattr(newField, key, value)
-                newField.grower_id = grower.id
-                db.session.add(newField)
-                db.session.commit()
-
-        flash("File accepted and added to database!")
-        return redirect(url_for('growerRecord', grower_id=grower.id))
-    else:
-        return render_template('upload.html')
-@app.route('/<int:grower_id>/testpdf.pdf')
+# PDF generation
+@app.route('/<division>/<int:grower_id>/pdf', methods=['GET', 'POST'])
 @login_required
-def gen_pdf(grower_id):
-    #fields = Fields.query.filter_by(grower_id=14).all()
-    grower = db.session.query(Growers).filter(Growers.id == grower_id).one()
-    pages = db.session.query(Fields).filter(Fields.grower_id == grower_id)
-    #df = pd.read_sql(query.statement, query.session.bind)
-    html_out = render_template('report_template.html',pages = pages, grower=grower)
-    return render_pdf(HTML(string=html_out))
+def gen_pdf(division, grower_id):
+    toc = False
+    if request.method == 'POST':
+        if request.form.get('toc'):
+            toc = True
+
+        grower = db.session.query(Growers).filter(Growers.id == grower_id).one()
+        pages = db.session.query(Fields).filter(Fields.grower_id == grower_id).order_by("name")
+        html_out = render_template('report_template.html',pages = pages, grower=grower, toc=toc)
+        return render_pdf(HTML(string=html_out), download_filename=(grower.name + ' 2018 Harvest Scorecard.pdf'))
