@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <h3>Quick Stats:</h3>
+        <div>
+            <table class="table table-bordered table-striped">
+                <tr>
+                    <td>Division</td>
+                    <td>Growers Processed</td>
+                    <td>Fields Processed</td>
+                    <td>Harvest Data Acres</td>
+                    <td>Applied Data Acres</td>
+                </tr>
+                {% for stat in overallstats %}
+                <tr>
+                    <td>{{ stat.division }}</td>
+                    <td>{{ stat.total_growers }}</td>
+                    <td>{{ stat.total_fields }}</td>
+                    <td>{{ stat.harvest_acres | round(1) }}</td>
+                    <td>{{ stat.applied_acres | round(1) }}</td>
+                </tr>
+                {% endfor %}
+                <tr style="border: 2px solid black; font-weight: bold;">
+                    <td>Totals</td>
+                    <td>{{ summary.total_growers }}</td>
+                    <td>{{ summary.total_fields }}</td>
+                    <td>{{ summary.harvest_acres | round(1) }}</td>
+                    <td>{{ summary.applied_acres | round(1) }}</td>
+                </tr>
+            </table>
+            <!-- <img style="width:50%; float:left; height:200px;" src="{{ url_for('static', filename='pie-chart_colorcorrected.jpeg') }}"> -->
+        </div>
+        <form class="form-inline" style="float:right;" action="{{ url_for('export_csv') }}" method='post'>
+            <input type='submit' class="btn btn-primary" value='Export CSV'>
+        </form>
+        <img id="loady" style="display: none;" src="{{ url_for('static', filename='loading.gif') }}">
+        <!--
+        <h3>Average Crop Scores:</h3>
+        <ul>
+            {% for crop in crops %}
+            <li>{{ crop.crop }}</li>
+            {% endfor %}
+        </ul>
+        -->
+    </div>
+{% endblock %}

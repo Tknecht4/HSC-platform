@@ -28,6 +28,16 @@
                 </tr>
                 {% for page in pages %}
                 {% if page.is_visible == 1 %}
+                    {% if (loop.index % 33 == 0) and not loop.last %}
+                    </table>
+                    <p style="page-break-before: always" ></p>
+                    <table id="field-table">
+                        <tr>
+                            <th style="text-align: left;">Field Name</th>
+                            <th style="text-align: center;">Crop Type</th>
+                            <th style="text-align: center;">Right Rate Score</th>
+                        </tr>
+                    {% endif %}
                 <tr>
                     <td>{{ page.name }}</td>
                     <td style="text-align: center;">{{ page.crop }}</td>
@@ -52,10 +62,14 @@
                 </section>
                 <div class="article">
                     <span class="legend-title">Yield (bu/ac)</span>
+
                     <div class="legend">
                         <div style="float:left">Low</div>
                         <div style="float:right">High</div>
                     </div>
+                    {% if page.is_vr == 0 %}
+                    <span class="is-vr">Flat Rate</span>
+                    {% endif %}
                 </div>
                 <section class="keeptogether">
                     <span><img class="reg-img" src="{{ url_for('static', filename='image/' + page.plot_img) }}"></span>

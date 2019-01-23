@@ -5,6 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
         <script src="{{ url_for('static', filename='upload3.js') }}"></script>
+
+        <!-- script works but doesn't let flask follow through with redirect
+        <script>
+            function upload() {
+                $('#submit2').html('<img src="{{ url_for('static', filename='loading.gif') }}">');
+            }
+        </script>
+        -->
+
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
     </head>
     <body style="padding-top: 70px;">
@@ -18,13 +27,18 @@
                         <span class="icon-bar"></span>
                     </button>
                     <a class="navbar-left" href="{{ url_for('division') }}"><img style="height:40px; margin:10px;" src="{{ url_for('static', filename='Echelon_E.png') }}"></a>
+                    {% if request.endpoint == 'dashboard' %}
+                    <a class="navbar-brand" href="{{ url_for('division') }} " style="font-size:20px; margin:5px;">Data Dashboard</a>
+                    {% else %}
                     <a class="navbar-brand" href="{{ url_for('division') }} " style="font-size:20px; margin:5px;">Echelon Harvest Scorecard Reports</a>
+                    {% endif %}
                 </div>
                     <ul class="nav navbar-nav navbar-right">
                         {% if current_user.is_authenticated %}
                             {% if request.endpoint == 'growerRecord' %}
                                 <li><a  href="{{ url_for('grower', division=division) }}"><span class="btn btn-sm btn-warning">Change Growers</span></a></li>
                             {% endif %}
+                        <li><a href="{{ url_for('dashboard') }}"><span class="btn btn-sm btn-default">Data Dashboard</span></a></li>
                         <li><a href="{{ url_for('uploadFiles') }}"><span class="btn btn-sm btn-success">Upload Files</span></a></li>
                             <li><a href="{{ url_for('logout') }}"><span class="btn btn-sm btn-default">Log out</span></a></li>
                         {% else %}

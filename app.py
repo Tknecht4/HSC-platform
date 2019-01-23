@@ -1,7 +1,7 @@
 
 # Echelon HSC Reporting Web Platform
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
 from flask_login import login_user, LoginManager, UserMixin, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from datetime import datetime
@@ -10,15 +10,18 @@ from forms import LoginForm, UploadForm
 import pandas as pd
 from flask_weasyprint import HTML, render_pdf
 from flask.ext.uploads import configure_uploads, UploadSet, IMAGES, patch_request_class
-import os
+import os, csv as csvmod, io
 
 # build app
 app = Flask(__name__, static_folder='/home/tknecht/mysite/static')
 app.config.from_object(Config)
 app.config['UPLOADED_IMAGES_DEST'] = '/home/tknecht/mysite/static/image/'
 app.config['UPLOADED_CSVFILES_DEST'] = '/home/tknecht/mysite/static/csv/'
+app.jinja_env.cache = {}
 # import sqlalchemy features for new mysql, migration
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import func, label
+from sqlalchemy import distinct
 from flask_migrate import Migrate
 
 # initiate db and create app with login manager
@@ -58,6 +61,7 @@ class Growers(db.Model):
     __tablename__ = 'growers'
     name = db.Column(db.String(250), nullable = False)
     division = db.Column(db.String(250))
+    retail = db.Column(db.String(250))
     id = db.Column(db.Integer, primary_key = True)
     created = db.Column(db.DateTime, default=datetime.now)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -86,7 +90,7 @@ class Fields(db.Model):
     is_visible = db.Column(db.Boolean(), default = True)
 
 # App functions
-def ingestCSV(configcsv):
+def ingestCSV(configcsv, divisionForm, retailForm, growerForm):
     df = pd.read_csv(configcsv, na_filter=False)
 
     # Check if valid file - test headers vs list then return if error
@@ -95,13 +99,19 @@ def ingestCSV(configcsv):
 
     for key,value in df.iterrows():
         #map row values to dictionary format
-        grower_name = value['Grower_Name']
+        grower_name = growerForm
         field_name = value['Field_Name']
-        field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'],
-                'map_img':value['Img_Path'], 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
-                'avg_N':float(value['Avg_N']), 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id,
+        field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'].strip("'"),
+                'map_img':value['Img_Path'].strip("'"), 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
+                'avg_n':float(value['Avg_N']), 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id,
                 'harvest_acres':float(value['Harvest_Acres']), 'applied_acres':float(value['Applied_Acres'])}
-        grower_values = {'name': grower_name, 'division':value['Division'], 'user_id':current_user.id}
+
+        if len(field_values['crop']) == 0:
+            field_values['crop'] = 'Unknown'
+        if len(field_values['variety']) == 0:
+            field_values['variety'] = 'Unknown'
+
+        grower_values = {'name': grower_name, 'division':divisionForm, 'retail':retailForm, 'user_id':current_user.id}
 
         #check if grower exists in db
         grower = Growers.query.filter_by(name=grower_name).first()
@@ -168,7 +178,7 @@ def logout():
 @app.route('/<division>/index')
 @login_required
 def grower(division):
-    items = Growers.query.filter_by(division = division).order_by("name").all()
+    items = Growers.query.filter_by(division = division).order_by("retail","name").all()
     return render_template('index.html',division=division, items=items)
 
 # create division list with link to index.html
@@ -218,6 +228,20 @@ def hideField(division, grower_id, field_id):
     db.session.commit()
     return redirect(url_for('growerRecord', division=division, grower_id=grower_id))
 
+# VR / Flat Rate Toggle Switch
+@app.route('/<division>/<int:grower_id>/<int:field_id>/toggleVR/')
+@login_required
+def toggleVR(division, grower_id, field_id):
+    itemToToggle = Fields.query.filter_by(id=field_id).one()
+
+    if itemToToggle.is_vr == 1:
+        itemToToggle.is_vr = 0
+    else:
+        itemToToggle.is_vr = 1
+    db.session.add(itemToToggle)
+    db.session.commit()
+    return redirect(url_for('growerRecord', division=division, grower_id=grower_id))
+
 # Upload a csv file then ingest to db
 @app.route('/upload', methods=['GET','POST'])
 @login_required
@@ -225,8 +249,12 @@ def uploadFiles():
 
     form = UploadForm()
     if form.validate_on_submit():
+        #ingest form data
+        grower_name = form.grower_name.data
+        retail = form.retail_loc.data
+        division = form.division_drop.data
         #process config file
-        grower = ingestCSV(form.upl_csv.data)
+        grower = ingestCSV(form.upl_csv.data, division, retail, grower_name)
         #save files to static
         for f in request.files.getlist('upl_imgs'):
             filepath = os.path.join(app.config['UPLOADED_IMAGES_DEST'], f.filename)
@@ -249,4 +277,55 @@ def gen_pdf(division, grower_id):
         grower = db.session.query(Growers).filter(Growers.id == grower_id).one()
         pages = db.session.query(Fields).filter(Fields.grower_id == grower_id).order_by("name")
         html_out = render_template('report_template.html',pages = pages, grower=grower, toc=toc)
-        return render_pdf(HTML(string=html_out), download_filename=(grower.name + ' 2018 Harvest Scorecard.pdf'))
+        return render_pdf(HTML(string=html_out), download_filename=(grower.name + ' Harvest Scorecard.pdf'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    # division list
+    divisions = Growers.query.distinct(Growers.division).group_by(Growers.division).order_by("division").all()
+    crops = Fields.query.distinct(Fields.crop).group_by(Fields.crop).order_by("crop").all()
+
+    # Get division summary stats
+    def getDivisionStats(div_list):
+        stats = []
+        for div in div_list:
+            stats.append(db.session.query(Growers.division, label('total_fields', func.count(Fields.id)),
+                    label('total_growers', func.count(distinct(Growers.id))),
+                    label('harvest_acres', func.sum(Fields.harvest_acres)),
+                    label('applied_acres', func.sum(Fields.applied_acres))).join(Fields).filter(Growers.division==div.division).first())
+        return stats
+
+    # Get overall summary stats
+    def getSummary():
+        return db.session.query(label('total_fields', func.count(Fields.id)),
+                    label('total_growers', func.count(distinct(Fields.grower_id))),
+                    label('harvest_acres', func.sum(Fields.harvest_acres)),
+                    label('applied_acres', func.sum(Fields.applied_acres))).first()
+
+    return render_template('dashboard.html', summary=getSummary(), overallstats=getDivisionStats(divisions), crops=crops)
+
+@app.route('/dashboard/export', methods=['GET', 'POST'])
+@login_required
+def export_csv():
+    if request.method == 'POST':
+        si = io.StringIO()
+        outcsv = csvmod.writer(si)
+
+        #get joined table with all fields
+        result = db.session.query(Fields, Growers).join(Growers).order_by(Growers.name)
+
+        #column names
+        outcsv.writerow(['Grower Name', 'Division', 'Retail', 'Field Name', 'Crop Type', 'Variety', 'Crop Year', 'Is VR', 'Harvest Score',
+                            'Avg Yield', 'Avg N', 'Harvest Acres', 'Applied Acres', 'Yield Data', 'Applied Data', 'Creation Date', 'Is Visible'])
+        for item in result:
+            outcsv.writerow([item.Growers.name, item.Growers.division, item.Growers.retail, item.Fields.name, item.Fields.crop, item.Fields.variety, item.Fields.crop_year,
+                                item.Fields.is_vr, item.Fields.harvest_score, item.Fields.avg_yield, item.Fields.avg_n, item.Fields.harvest_acres, item.Fields.applied_acres,
+                                item.Fields.yield_data, item.Fields.app_data, item.Fields.created, item.Fields.is_visible])
+        response = make_response(si.getvalue())
+        response.headers['Content-Disposition'] = 'attachment; filename=Export.csv'
+        response.headers["Content-type"] = "text/csv"
+        return response
+
+
+
