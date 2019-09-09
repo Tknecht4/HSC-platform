@@ -2,7 +2,7 @@
 
 {% block content %}
     <div class="container">
-        <h3>Quick Stats:</h3>
+        <h3>Quick Stats All Time:</h3>
         <div>
             <table class="table table-bordered table-striped">
                 <tr>
@@ -29,19 +29,10 @@
                     <td>{{ summary.applied_acres | round(1) }}</td>
                 </tr>
             </table>
-            <!-- <img style="width:50%; float:left; height:200px;" src="{{ url_for('static', filename='pie-chart_colorcorrected.jpeg') }}"> -->
         </div>
         <form class="form-inline" style="float:right;" action="{{ url_for('export_csv') }}" method='post'>
             <input type='submit' class="btn btn-primary" value='Export CSV'>
         </form>
         <img id="loady" style="display: none;" src="{{ url_for('static', filename='loading.gif') }}">
-        <!--
-        <h3>Average Crop Scores:</h3>
-        <ul>
-            {% for crop in crops %}
-            <li>{{ crop.crop }}</li>
-            {% endfor %}
-        </ul>
-        -->
     </div>
 {% endblock %}

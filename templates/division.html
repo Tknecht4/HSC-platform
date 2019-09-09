@@ -2,15 +2,19 @@
 
 {% block content %}
     <div class="container">
-        <h2>Select your division:</h2>
+        <h2>Select your division for {{year}}:</h2>
         </br>
         </br>
         <ul>
         {% for i in items %}
-            <li><a href ="{{ url_for('grower', division = i.division)}}" style="font-size: 15px;"> {{i.division}} </a></li>
+            <li><a href ="{{url_for('grower', division = i.division, year=year)}}" style="font-size: 15px;"> {{i.division}} </a></li>
         {% endfor %}
         </ul>
         </br>
+        <h4>Available Years:</h4>
+        {% for archive_year in archive_years %}
+            <li><a href="{{url_for('division', year=archive_year.crop_year)}}">{{archive_year.crop_year}}</a></li>
+        {% endfor %}
         </br>
     </div>
 {% endblock %}

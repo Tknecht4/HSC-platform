@@ -2,12 +2,14 @@
 
 {% block content %}
     <div class="container">
-        <h2>Growers available for scorecards:</h2>
+        <h2>Growers available for scorecards {{year}}:</h2>
         </br>
         </br>
         <ul>
         {% for i in items %}
-            <li><a href ="{{ url_for('growerRecord', division=i.division, grower_id = i.id)}}" style="font-size: 15px;"> {{i.retail}} - {{i.name}} </a></li>
+            <li>
+                <a href ="{{url_for('growerRecord', division=i.division, grower_id=i.id, year=year)}}" style="font-size: 15px;">{{i.retail}} - {{i.name}}</a>
+            </li>
         {% endfor %}
         </ul>
         </br>

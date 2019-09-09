@@ -30,7 +30,7 @@
                 <img id="loady" style="display: none; object-fit: fill" src="{{ url_for('static', filename='loading.gif') }}">
                 <div id="submit2" style="margin-top: 50px">
                     {{ form.submit(class="btn btn-primary") }}
-                    <a class="btn btn-danger" href="{{url_for('division')}}">Cancel</a>
+                    <a class="btn btn-danger" href="{{url_for('division', year=current_year)}}">Cancel</a>
                 </div>
             </div>
             {% for error in form.upl_imgs.errors %}
