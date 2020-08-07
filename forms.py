@@ -14,10 +14,10 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 class UploadForm(FlaskForm):
-    my_choices = [('Southeast Saskatchewan','Southeast Saskatchewan'), ('Southwest Saskatchewan','Southwest Saskatchewan'), ('Southern Alberta','Southern Alberta'), ('Manitoba', 'Manitoba'),
-                    ('North Central Saskatchewan','North Central Saskatchewan'), ('Northeast Saskatchewan','Northeast Saskatchewan'), ('Northwest Saskatchewan','Northwest Saskatchewan'),
-                    ('East Saskatchewan','East Saskatchewan'), ('North Central Alberta','North Central Alberta'), ('Northern Alberta','Northern Alberta'), ('North Dakota','North Dakota'),
-                    ('Glenndive','Glenndive'), ('US Test Scorecards','US Test Scorecards')]
+    my_choices = [('Southeast Saskatchewan','Southeast Saskatchewan'), ('Southwest Saskatchewan','Southwest Saskatchewan'), ('Southern Alberta','Southern Alberta'),
+                    ('Manitoba', 'Manitoba'), ('Northeast Saskatchewan','Northeast Saskatchewan'), ('Northwest Saskatchewan','Northwest Saskatchewan'),
+                    ('East Saskatchewan','East Saskatchewan'), ('North Central Alberta','North Central Alberta'), ('Northern Alberta','Northern Alberta'),
+                    ('Glenndive','Glenndive'), ('Test Scorecards','Test Scorecards'), ('US Scorecards','US Scorecards'), ('Australia Scorecards','Australia Scorecards')]
     upl_imgs = FileField('upl_imgs', validators=[FileRequired("Please select images"), FileAllowed(images, 'Images Only Please!')])
     upl_csv = FileField('upl_csv', validators=[FileRequired("Please select config.csv"), FileAllowed(csv, 'Csv File Only!')])
     division_drop = SelectField('Division', choices = my_choices, validators = [Required()])

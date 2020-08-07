@@ -108,7 +108,7 @@ def ingestCSV(configcsv, divisionForm, retailForm, growerForm):
         field_name = value['Field_Name']
         field_values = {'name': field_name, 'crop':value['Crop_Type'], 'avg_yield':value['Avg_Yield'], 'plot_img':value['Plot_Path'].strip("'"),
                 'map_img':value['Img_Path'].strip("'"), 'yield_data':value['Yld_Vol_Data'], 'variety':value['Variety'], 'harvest_score':value['Harvest_Score'],
-                'avg_n':float(value['Avg_N']), 'app_data':value['N_Apd_Data'], 'crop_year':value['Crop_Year'], 'is_vr':value['Is_VR'], 'user_id':current_user.id,
+                'avg_n':float(value['Avg_N']), 'app_data':value['N_Apd_Data'], 'crop_year':int(value['Crop_Year']), 'is_vr':value['Is_VR'], 'user_id':current_user.id,
                 'harvest_acres':float(value['Harvest_Acres']), 'applied_acres':float(value['Applied_Acres']),'applied_map_img':value['Applied_Img_Path'].strip("'"),
                 'field_centroid':value['Field_Centroid']}
 
@@ -123,7 +123,7 @@ def ingestCSV(configcsv, divisionForm, retailForm, growerForm):
         grower = Growers.query.filter_by(name=grower_name).first()
         if grower is not None:
             # Check if field exists.
-            itemToEdit = Fields.query.filter_by(name=field_name, crop_year=crop_year).first()
+            itemToEdit = Fields.query.filter_by(name=field_name, crop_year=int(crop_year)).first()
             if itemToEdit is not None:
                 # If the field exists we want to update existing record.
                 for key, value in field_values.items():
@@ -187,7 +187,7 @@ def logout():
 @login_required
 def division(year):
     # Gets list of available divisions for the selected year
-    items = Growers.query.distinct(Growers.division).filter(Fields.crop_year==year).group_by(Growers.division).order_by("division")
+    items = db.session.query(Growers).join(Fields).filter(Fields.crop_year==year).group_by(Growers.division).order_by("division")
 
     # Gets a list of years available to filter by
     archive_years = Fields.query.distinct(Fields.crop_year).group_by(Fields.crop_year)
@@ -197,7 +197,7 @@ def division(year):
 @app.route('/<int:year>/<division>/index/')
 @login_required
 def grower(year, division):
-    items = Growers.query.filter(Growers.division==division, Fields.crop_year==year).order_by(Growers.retail, Growers.name).all()
+    items = db.session.query(Growers).join(Fields).filter(Growers.division==division, Fields.crop_year==year).order_by(Growers.retail, Growers.name).all()
     return render_template('index.html', year=year, division=division, items=items, current_year=current_year)
 
 # Create page listing all of the fields available for the grower in a table format.
@@ -223,7 +223,7 @@ def editField(year, division, grower_id, field_id):
         db.session.add(editedItem)
         db.session.commit()
         flash(editedItem.name + " successfully edited!")
-        return redirect(url_for('growerRecord', division=division, grower_id=grower_id), year=year, current_year=current_year)
+        return redirect(url_for('growerRecord', division=division, grower_id=grower_id, year=year, current_year=current_year))
     else:
         return render_template('editfield.html', division=division, grower_id=grower_id, year=year,  field_id=field_id, item=editedItem, current_year=current_year)
 
@@ -274,7 +274,7 @@ def uploadFiles():
                 os.remove(filepath)
             images.save(f)
         flash("Files accepted and added to database.")
-        return redirect(url_for('growerRecord', division=grower.division, grower_id=grower.id, year=crop_year))
+        return redirect(url_for('growerRecord', division=grower.division, grower_id=grower.id, year=crop_year, current_year=current_year))
     return render_template('upload.html', form=form, current_year=current_year)
 
 # PDF generation query. Checks if user wants table of contents then passes the query results into the report template.
@@ -288,7 +288,7 @@ def gen_pdf(year, division, grower_id):
 
         grower = db.session.query(Growers).filter(Growers.id == grower_id).one()
         pages = db.session.query(Fields).filter(Fields.grower_id == grower_id, Fields.crop_year == year).order_by("name")
-        html_out = render_template('report_template.html',pages=pages, grower=grower, toc=toc)
+        html_out = render_template('report_template.html',pages=pages, grower=grower, toc=toc, year=year)
         return render_pdf(HTML(string=html_out), download_filename=(grower.name + ' Harvest Scorecard.pdf'))
 
 # Data dashboard page. Current numbers for each division.

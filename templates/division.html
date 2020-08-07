@@ -10,11 +10,11 @@
             <li><a href ="{{url_for('grower', division = i.division, year=year)}}" style="font-size: 15px;"> {{i.division}} </a></li>
         {% endfor %}
         </ul>
-        </br>
+        <div style="position:absolute;top:100;right:600">
         <h4>Available Years:</h4>
         {% for archive_year in archive_years %}
             <li><a href="{{url_for('division', year=archive_year.crop_year)}}">{{archive_year.crop_year}}</a></li>
         {% endfor %}
-        </br>
+        </div>
     </div>
 {% endblock %}

@@ -12,9 +12,9 @@
             <img class="header-img-right-title" src="{{ url_for('static', filename='Echelon_Logo.png') }}">
             <img class="img-title" src="{{ url_for('static', filename='title.png') }}">
                 <div id="title-text-box">
-                    <h2>Harvest Score Card</h2>
+                    <h2>Harvest Scorecard</h2>
                     <p id="title-p">{{ grower.name }}</p>
-                    <p id="title-p">Crop Year: 2018</p>
+                    <p id="title-p">Crop Year: {{ year }}</p>
                 </div>
         </div>
         <p style="page-break-after: always" ></p>
