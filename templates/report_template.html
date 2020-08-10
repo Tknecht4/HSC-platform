@@ -25,6 +25,9 @@
                     <th style="text-align: left;">Field Name</th>
                     <th style="text-align: center;">Crop Type</th>
                     <th style="text-align: center;">Right Rate Score</th>
+                    <th style="text-align: center;">Application Acres</th>
+                    <th style="text-align: center;">Harvest Acres</th>
+                    <th style="text-align: center;">VR/Flat Rate</th>
                 </tr>
                 {% for page in pages %}
                 {% if page.is_visible == 1 %}
@@ -36,12 +39,24 @@
                             <th style="text-align: left;">Field Name</th>
                             <th style="text-align: center;">Crop Type</th>
                             <th style="text-align: center;">Right Rate Score</th>
+                            <th style="text-align: center;">Application Acres</th>
+                            <th style="text-align: center;">Harvest Acres</th>
+                            <th style="text-align: center;">VR/Flat Rate</th>
                         </tr>
                     {% endif %}
                 <tr>
                     <td>{{ page.name }}</td>
                     <td style="text-align: center;">{{ page.crop }}</td>
                     <td style="text-align: center;">{{ page.harvest_score }}</td>
+                    <td style="text-align: center;">{{ page.applied_acres }}</td>
+                    <td style="text-align: center;">{{ page.harvest_acres }}</td>
+                    <td style="text-align: center;">
+                        {% if page.is_vr == 0 %}
+                        <span class="toc-is-fr"><strong>Flat Rate</strong></span>
+                        {% else %}
+                        <span class="toc-is-vr"><strong>VR</strong></span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endif %}
                 {% endfor %}
@@ -59,6 +74,7 @@
             <div id="content">
                 <section id="main">
                     <img id="mapimg" src="{{ url_for('static', filename='image/' + page.map_img) }}">
+                    <img id="asappliedimg" src="{{ url_for('static', filename='image/' + page.applied_map_img) }}">
                 </section>
                 <div class="article">
                     <span class="legend-title">Yield (bu/ac)</span>
@@ -68,7 +84,7 @@
                         <div style="float:right">High</div>
                     </div>
                     {% if page.is_vr == 0 %}
-                    <span class="is-vr">Flat Rate</span>
+                    <span class="is-vr"><strong>Flat Rate</strong></span>
                     {% endif %}
                 </div>
                 <section class="keeptogether">
@@ -77,6 +93,10 @@
                         <span class="harvest-title"><strong>Right Rate Score</strong></span>
                         <span class="harvest-score">{{ page.harvest_score }}</span>
                     </div>
+                </section>
+                <section class="imagelabels">
+                    <span class="harvestmapimg-title"><strong>Harvest Map</strong></span>
+                    <span class="asappliedmapimg-title"><strong>Application Map</strong></span>
                 </section>
             </div>
             <div class="footer">
