@@ -9,7 +9,7 @@ from config import Config
 from forms import LoginForm, UploadForm
 import pandas as pd
 from flask_weasyprint import HTML, render_pdf
-from flask.ext.uploads import configure_uploads, UploadSet, IMAGES, patch_request_class
+from flask_uploads import configure_uploads, UploadSet, IMAGES, patch_request_class
 import os
 import csv as csvmod
 import io
@@ -93,6 +93,7 @@ class Fields(db.Model):
     created = db.Column(db.DateTime, default=datetime.now)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     is_visible = db.Column(db.Boolean(), default = True)
+    is_planting = db.Column(db.Boolean(), default = False)
 
 # App functions
 def ingestCSV(configcsv, divisionForm, retailForm, growerForm):
@@ -241,6 +242,20 @@ def hideField(year, division, grower_id, field_id):
     db.session.commit()
     return redirect(url_for('growerRecord', division=division, grower_id=grower_id, year=year, current_year=current_year))
 
+#toggle flag for seed or fert.
+@app.route('/<int:year>/<division>/<int:grower_id>/<int:field_id>/plantingfert/')
+@login_required
+def plantingfert(year, division, grower_id, field_id):
+    itemToToggle = Fields.query.filter_by(id=field_id).one()
+
+    if itemToToggle.is_planting == 1:
+        itemToToggle.is_planting = 0
+    else:
+        itemToToggle.is_planting = 1
+    db.session.add(itemToToggle)
+    db.session.commit()
+    return redirect(url_for('growerRecord', division=division, grower_id=grower_id, year=year, current_year=current_year))
+
 # VR / Flat Rate Toggle Switch to add the tag on the report.
 @app.route('/<int:year>/<division>/<int:grower_id>/<int:field_id>/toggleVR/')
 @login_required
@@ -331,11 +346,11 @@ def export_csv():
 
         # Column name list for the csv.
         outcsv.writerow(['Grower Name', 'Division', 'Retail', 'Field Name', 'Crop Type', 'Variety', 'Crop Year', 'Is VR', 'Harvest Score',
-                            'Avg Yield', 'Avg N', 'Harvest Acres', 'Applied Acres', 'Yield Data', 'Applied Data', 'Creation Date', 'Is Visible'])
+                            'Avg Yield', 'Avg N', 'Harvest Acres', 'Applied Acres', 'Yield Data', 'Applied Data', 'Creation Date', 'Is Planting', 'Is Visible'])
         for item in result:
             outcsv.writerow([item.Growers.name, item.Growers.division, item.Growers.retail, item.Fields.name, item.Fields.crop, item.Fields.variety, item.Fields.crop_year,
                                 item.Fields.is_vr, item.Fields.harvest_score, item.Fields.avg_yield, item.Fields.avg_n, item.Fields.harvest_acres, item.Fields.applied_acres,
-                                item.Fields.yield_data, item.Fields.app_data, item.Fields.created, item.Fields.is_visible])
+                                item.Fields.yield_data, item.Fields.app_data, item.Fields.created, item.Fields.is_planting, item.Fields.is_visible])
         response = make_response(si.getvalue())
         response.headers['Content-Disposition'] = 'attachment; filename=Export.csv'
         response.headers["Content-type"] = "text/csv"

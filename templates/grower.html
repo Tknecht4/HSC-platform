@@ -17,6 +17,7 @@
                 <th>Map Image</th>
                 <th>Regression Plot</th>
                 <th>VR/Flat Rate</th>
+                <th>Fert/Planting</th>
                 <th></th>
                 <th></th>
             </tr>
@@ -37,6 +38,14 @@
                     {% endif %}
                     </a>
                 </td>
+                <td><a class="btn btn-xs btn-warning" href ="{{ url_for('plantingfert', year=year, division=grower.division, grower_id = grower.id, field_id = i.id)}}">
+                    {% if i.is_planting %}
+                    Planting
+                    {% else %}
+                    Fertilizer
+                    {% endif %}
+                    </a>
+                </td>
                 <td><a class="btn btn-xs btn-warning" href ="{{ url_for('editField', year=year,division=grower.division, grower_id = grower.id, field_id = i.id)}}">Edit </a></td>
                 <td><a class="btn btn-xs btn-danger" href ="{{ url_for('hideField', year=year,division=grower.division, grower_id = grower.id, field_id = i.id)}}">Hide Field</a></td>
             </tr>
@@ -53,6 +62,14 @@
                     VR
                     {% else %}
                     Flat Rate
+                    {% endif %}
+                    </a>
+                </td>
+                <td><a class="btn btn-xs btn-warning" href ="{{ url_for('plantingfert', year=year, division=grower.division, grower_id = grower.id, field_id = i.id)}}">
+                    {% if i.is_planting %}
+                    Planting
+                    {% else %}
+                    Fertilizer
                     {% endif %}
                     </a>
                 </td>
