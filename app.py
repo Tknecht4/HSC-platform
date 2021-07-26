@@ -346,11 +346,11 @@ def export_csv():
 
         # Column name list for the csv.
         outcsv.writerow(['Grower Name', 'Division', 'Retail', 'Field Name', 'Crop Type', 'Variety', 'Crop Year', 'Is VR', 'Harvest Score',
-                            'Avg Yield', 'Avg N', 'Harvest Acres', 'Applied Acres', 'Yield Data', 'Applied Data', 'Creation Date', 'Is Planting', 'Is Visible'])
+                            'Avg Yield', 'Avg N', 'Harvest Acres', 'Applied Acres', 'Yield Data', 'Applied Data', 'Creation Date', 'Is Planting', 'Is Visible', 'Field Centroid'])
         for item in result:
             outcsv.writerow([item.Growers.name, item.Growers.division, item.Growers.retail, item.Fields.name, item.Fields.crop, item.Fields.variety, item.Fields.crop_year,
                                 item.Fields.is_vr, item.Fields.harvest_score, item.Fields.avg_yield, item.Fields.avg_n, item.Fields.harvest_acres, item.Fields.applied_acres,
-                                item.Fields.yield_data, item.Fields.app_data, item.Fields.created, item.Fields.is_planting, item.Fields.is_visible])
+                                item.Fields.yield_data, item.Fields.app_data, item.Fields.created, item.Fields.is_planting, item.Fields.is_visible, item.Fields.field_centroid])
         response = make_response(si.getvalue())
         response.headers['Content-Disposition'] = 'attachment; filename=Export.csv'
         response.headers["Content-type"] = "text/csv"
